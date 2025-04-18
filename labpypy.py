@@ -44,6 +44,10 @@ EXIT_FRAME_SOUND = pygame.mixer.Sound("./comeback.mp3")
 MOVE_RIGHT_SOUND = pygame.mixer.Sound("./right.mp3")
 MOVE_LEFT_SOUND = pygame.mixer.Sound("./left.mp3")
 
+pygame.mixer.music.load("./background_music.mp3")
+pygame.mixer.music.set_volume(0.5) # vol 0-1
+pygame.mixer.music.play(-1) # loop
+
 last_played = {
     "exit": 0,
     "left": 0,
