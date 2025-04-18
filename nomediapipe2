@@ -1,0 +1,80 @@
+import cv2
+import numpy as np
+import time
+
+cap = cv2.VideoCapture(0)
+last_curl_time = {"Left": 0, "Right": 0}
+cooldown = 1.0  # seconds
+
+# Load Haar Cascade for face detection
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame = cv2.flip(frame, 1)
+    output = frame.copy()
+    height, width = frame.shape[:2]
+    center_x = width // 2
+    current_time = time.time()
+
+    # Convert to HSV and filter for skin
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    lower_skin = np.array([0, 30, 60], dtype=np.uint8)
+    upper_skin = np.array([20, 255, 255], dtype=np.uint8)
+    mask = cv2.inRange(hsv, lower_skin, upper_skin)
+    mask = cv2.erode(mask, None, iterations=2)
+    mask = cv2.dilate(mask, None, iterations=2)
+
+    # Face detection
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    # Mask out face regions by setting them to black (optional, for clarity)
+    for (x, y, w, h) in faces:
+        mask[y:y+h, x:x+w] = 0  # Set face region to black (optional)
+
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area < 2000:
+            continue
+
+        x, y, w, h = cv2.boundingRect(cnt)
+        aspect_ratio = h / float(w)
+
+        # Filter out square shapes (likely head), and things too high (y < 100)
+        if 0.8 < aspect_ratio < 1.3 or y < 100:
+            continue
+
+        # Find which side
+        cx = x + w // 2
+        side = "Right" if cx > center_x else "Left"
+
+        # Corrected: Curl = short & wide (low AR), Extend = tall & thin (high AR)
+        if aspect_ratio < 0.9:
+            status = "Curl"
+        else:
+            status = "Extend"
+
+        # Trigger only on Curl with cooldown
+        if status == "Curl" and (current_time - last_curl_time[side]) > cooldown:
+            print(f"{side} - Curl")
+            last_curl_time[side] = current_time
+
+        # Visuals
+        cv2.drawContours(output, [cnt], -1, (0, 255, 0), 2)
+        cv2.rectangle(output, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        cv2.circle(output, (cx, y + h // 2), 6, (0, 0, 255), -1)
+        cv2.putText(output, f"{side} - {status}", (x, y - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+    cv2.imshow("Arm Detection", output)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
