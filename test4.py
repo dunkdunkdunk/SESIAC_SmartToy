@@ -5,40 +5,33 @@ import numpy as np
 import pygame
 import Jetson.GPIO as GPIO
 
-# End IR Sensor pin21 I L, left flipper pin13 L, right flipper pin11 L,
+# 3.3V pin1, IR Sensor pin3, left flipper pin5, right flipper pin7,
 # 13 -> 11, 15 -> 13, ..., 27(GND) -> 25
-# Start button pin7 I H, Starter(solenoid ball) pin15 O L
-# Bumper input1,2,3 pin37,35,33 I H, Bumper out1,2,3 pin31,19,29  
-END_IR_PIN = 21
-FLIPPER_LEFT_PIN = 23
-FLIPPER_RIGHT_PIN = 11
+# Start button pin11, Dunk tank pin13, Starter(solenoid ball) pin15, 3.3V pin17, Bumper pin19
+END_IR_PIN = 3
+FLIPPER_LEFT_PIN = 5
+FLIPPER_RIGHT_PIN = 7
 START_BUTTON_PIN = 11
+DUNK_TANK_PIN = 13
 STARTER_PIN = 15
-BUMPER_IN1_PIN = 37
-BUMPER_IN2_PIN = 35
-BUMPER_IN3_PIN = 33
-BUMPER_OUT1_PIN = 31
-BUMPER_OUT2_PIN = 19
-BUMPER_OUT3_PIN = 29
+BUMPER_PIN = 19
 # use.BOARD (physical pin)* or BCM? 
 
+# ir sensor for end game *active low detect = 0
+# dunk tank, bumper for score *active low
 GPIO.setmode(GPIO.BOARD)
 # commented out END_IR, START_BUTTON
 
 play = False
 GPIO.setup(END_IR_PIN, GPIO.IN)
-GPIO.setup(START_BUTTON_PIN, GPIO.IN)
-GPIO.setup(BUMPER_IN1_PIN, GPIO.IN)
-GPIO.setup(BUMPER_IN2_PIN, GPIO.IN)
-GPIO.setup(BUMPER_IN3_PIN, GPIO.IN)
+GPIO.setup(START_BUTTON_PIN, GPIO.IN) # press -> high
+GPIO.setup(DUNK_TANK_PIN, GPIO.IN)
+GPIO.setup(BUMPER_PIN, GPIO.IN)
 
-GPIO.setup(BUMPER_OUT1_PIN, GPIO.IN)
-GPIO.setup(BUMPER_OUT2_PIN, GPIO.IN)
-GPIO.setup(BUMPER_OUT3_PIN, GPIO.IN)
 GPIO.setup(STARTER_PIN, GPIO.OUT)
 GPIO.setup(FLIPPER_LEFT_PIN, GPIO.OUT)
 GPIO.setup(FLIPPER_RIGHT_PIN, GPIO.OUT)
-# output end, bumper set low with 0.5s high -> lcd calculate score
+# output end, dunktank, bumper set low with 0.5s high -> lcd calculate score
 
 # # Wait for button press to start
 # print("Press button to start")
@@ -105,6 +98,7 @@ last_played_sound = {
     "left": 0,
     "right": 0
 }
+play = False
 
 def get_angle(p1, p2, p3):
     a = np.array(p1)
